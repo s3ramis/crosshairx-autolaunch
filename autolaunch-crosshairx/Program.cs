@@ -12,6 +12,11 @@ namespace autolaunch_crosshairx
         {
             string configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "programs.cfg");
             var configLoader = new ConfigReader(configFile);
+            if (!configLoader.IsLoaded)
+            {
+                Console.WriteLine("closing application...");
+                return;
+            }
             var processesToWatchPaths = configLoader.GetAppsToWatch();
             string? processToOpenPath = configLoader.GetAppToOpen();
             string? processToOpenName = Path.GetFileNameWithoutExtension(processToOpenPath);

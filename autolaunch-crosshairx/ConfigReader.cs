@@ -15,6 +15,7 @@ public class ConfigReader
         if (!File.Exists(_configFilePath))
         {
             Console.WriteLine($"no cfg file found in {_configFilePath}");
+
             return;
         }
         else
@@ -27,6 +28,10 @@ public class ConfigReader
             {
                 Console.WriteLine("config file successfully loaded");
                 IsLoaded = true;
+            }
+            else
+            {
+                Console.WriteLine("cfg file has wrong layout");
             }
         }
     }
