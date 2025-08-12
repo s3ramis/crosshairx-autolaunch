@@ -1,0 +1,65 @@
+# Build output
+bin/
+obj/
+out/
+Debug/
+Release/
+x64/
+x86/
+*.exe
+*.dll
+*.pdb
+*.cache
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.userprefs
+
+# Visual Studio
+.vs/
+*.dbmdl
+*.jfm
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# NuGet
+*.nupkg
+# The packages folder can be ignored because of restore
+packages/
+# except build/, which is used as an MSBuild target
+!packages/build/
+# Uncomment if necessary
+#!**/packages/repositories.config
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# DotCover
+*.dotCover
+
+# Temporary files
+~$*
+*.tmp
+*.temp
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Configuration
+appsettings.Development.json
+appsettings.Local.json

@@ -1,0 +1,7 @@
+open app:
+"C:\Program Files\1\1.exe"
+
+watch apps:
+"C:\Program Files\a\a.exe"
+"C:\Program Files\b\b.exe"
+"C:\Program Files\c\c.exe"
