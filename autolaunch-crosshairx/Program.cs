@@ -67,7 +67,7 @@ namespace autolaunch_crosshairx
             string? processToOpenName = Path.GetFileNameWithoutExtension(processToOpenPath);
 
             Logger.Instance.Log("watching for apps to start...");
-
+            
             while (true)
             {
                 bool isAnyProcessToBeWatchedRunning = false;
