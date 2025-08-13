@@ -1,28 +1,72 @@
-﻿using System;
-using System.Data;
-using System.Diagnostics;
-using System.Threading;
-
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace autolaunch_crosshairx
 {
-    class Program
+    internal static partial class Program
     {
+
+        private static NotifyIcon? trayIcon;
+        private static LogViewerForm? logViewerForm;
+
+        [STAThread]
         static void Main(string[] args)
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            CreateTrayIcon();
+
+            Thread watcherThread = new Thread(WatchForProcesses)
+            {
+                IsBackground = true
+            };
+            watcherThread.Start();
+            Application.Run();
+        }
+
+        private static void CreateTrayIcon()
+        {
+            trayIcon = new NotifyIcon
+            {
+                Icon = SystemIcons.Application,
+                Text = "autolaunch crosshairX",
+                Visible = true,
+            };
+
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("show log", null, (_, _) => OpenLogViewer());
+            menu.Items.Add("exit app", null, (_, _) => ExitApp());
+
+            trayIcon.ContextMenuStrip = menu;
+            trayIcon.DoubleClick += (s, e) => OpenLogViewer();
+        }
+
+        private static void ExitApp()
+        {
+            trayIcon!.Visible = false;
+            Environment.Exit(0);
+        }
+
+        private static void WatchForProcesses()
         {
             string configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "programs.cfg");
             var configLoader = new ConfigReader(configFile);
             if (!configLoader.IsLoaded)
             {
-                Console.WriteLine("closing application...");
-                return;
+                Logger.Instance.Log("closing application...");
+                using (var viewer = new LogViewerForm(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "autolaunchapp.log")))
+                {
+                    viewer.ShowDialog(); 
+                }
+                Environment.Exit(1);
             }
             var processesToWatchPaths = configLoader.GetAppsToWatch();
             string? processToOpenPath = configLoader.GetAppToOpen();
             string? processToOpenName = Path.GetFileNameWithoutExtension(processToOpenPath);
 
-            Console.WriteLine("watching for apps to start...");
-            Console.WriteLine();
+            Logger.Instance.Log("watching for apps to start...");
 
             while (true)
             {
@@ -32,11 +76,10 @@ namespace autolaunch_crosshairx
                 {
                     string processName = Path.GetFileNameWithoutExtension(processToWatch);
                     var runningProcesses = Process.GetProcessesByName(processName);
-                    string lastMessage = "";
 
                     if (runningProcesses.Length > 0)
                     {
-                        lastMessage = logMessage($"detected {processName}", lastMessage);
+                        Logger.Instance.Log($"detected {processName}");
                         isAnyProcessToBeWatchedRunning = true;
                         break;
                     }
@@ -48,14 +91,14 @@ namespace autolaunch_crosshairx
                 {
                     if (openProcesses.Length == 0)
                     {
-                        Console.WriteLine($"starting {processToOpenName}");
+                        Logger.Instance.Log($"starting {processToOpenName}");
                         try
                         {
                             Process.Start(processToOpenPath!);
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"failed to open app: {ex.Message}");
+                            Logger.Instance.Log($"failed to open app: {ex.Message}");
                         }
                     }
                 }
@@ -63,25 +106,29 @@ namespace autolaunch_crosshairx
                 {
                     if (openProcesses.Length > 0)
                     {
-                        Console.WriteLine($"closing {processToOpenName}");
+                        Logger.Instance.Log($"closing {processToOpenName}");
                         foreach (var proc in openProcesses)
                         {
-                            ProgramCloser closer = new ProgramCloser(proc);
+                            ProcessCloser closer = new ProcessCloser(proc);
                             closer.ShutdownProcess();
                         }
                     }
                 }
-                Thread.Sleep(30000);
+                Thread.Sleep(5000);
             }
         }
-        static string logMessage(string message, string lastMessage)
+
+        private static void OpenLogViewer()
         {
-            if (message != lastMessage)
+            string logFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "autolaunchapp.log");
+
+            if (logViewerForm == null || logViewerForm.IsDisposed)
             {
-                Console.WriteLine(message);
-                return message;
+                logViewerForm = new LogViewerForm(logFile);
             }
-            else return lastMessage;
+
+            logViewerForm.Show();
+            logViewerForm.BringToFront();
         }
     }
 }

@@ -5,7 +5,7 @@ namespace autolaunch_crosshairx;
 public class ConfigReader
 {
     private readonly string _configFilePath;
-    private readonly List<string> _lines = new List<string>();
+    private readonly List<string> _lines = [];
     public bool IsLoaded { get; private set; } = false;
 
     public ConfigReader(string configFilePath)
@@ -14,7 +14,7 @@ public class ConfigReader
 
         if (!File.Exists(_configFilePath))
         {
-            Console.WriteLine($"no cfg file found in {_configFilePath}");
+            Logger.Instance.Log($"no cfg file found in {_configFilePath}");
 
             return;
         }
@@ -26,12 +26,12 @@ public class ConfigReader
 
             if (GetSingleApp(_lines, "open app:") != null && GetMultipleApps(_lines, "watch apps:").Count > 0)
             {
-                Console.WriteLine("config file successfully loaded");
+                Logger.Instance.Log("config successfully loaded");
                 IsLoaded = true;
             }
             else
             {
-                Console.WriteLine("cfg file has wrong layout");
+                Logger.Instance.Log("cfg file has wrong layout");
             }
         }
     }
@@ -46,7 +46,7 @@ public class ConfigReader
         return GetMultipleApps(_lines, "watch apps:");
     }
 
-    private string? GetSingleApp(List<string> lines, string section)
+    private static string? GetSingleApp(List<string> lines, string section)
     {
         string? currentSection = null;
 
@@ -54,13 +54,13 @@ public class ConfigReader
         {
             var trimmedLine = line.Trim();
 
-            if (trimmedLine.EndsWith(":"))
+            if (trimmedLine.EndsWith(':'))
             {
                 currentSection = trimmedLine.ToLowerInvariant();
                 continue;
             }
 
-            if (currentSection == section && trimmedLine.StartsWith("\"") && trimmedLine.EndsWith("\""))
+            if (currentSection == section && trimmedLine.StartsWith('\"') && trimmedLine.EndsWith('\"'))
             {
                 return trimmedLine.Trim('\"');
             }
@@ -68,9 +68,9 @@ public class ConfigReader
         return null;
     }
 
-    private List<string> GetMultipleApps(List<string> lines, string section)
+    private static List<string> GetMultipleApps(List<string> lines, string section)
     {
-        List<string> apps = new();
+        List<string> apps = [];
 
         string? currentSection = null;
 
@@ -78,13 +78,13 @@ public class ConfigReader
         {
             var trimmedLine = line.Trim();
 
-            if (trimmedLine.EndsWith(":"))
+            if (trimmedLine.EndsWith(':'))
             {
                 currentSection = trimmedLine.ToLowerInvariant();
                 continue;
             }
 
-            if (currentSection == section && trimmedLine.StartsWith("\"") && trimmedLine.EndsWith("\""))
+            if (currentSection == section && trimmedLine.StartsWith('\"') && trimmedLine.EndsWith('\"'))
             {
                 apps.Add(trimmedLine.Trim('\"'));
             }

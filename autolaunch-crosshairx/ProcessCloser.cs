@@ -5,14 +5,10 @@ using System.Runtime.CompilerServices;
 namespace autolaunch_crosshairx
 {
 
-    public class ProgramCloser
+    public class ProcessCloser(Process appToClose)
     {
-        private Process appToClose;
+        private readonly Process appToClose = appToClose;
 
-        public ProgramCloser(Process appToClose)
-        {
-            this.appToClose = appToClose;
-        }
         public void ShutdownProcess()
         {
             try
@@ -24,8 +20,8 @@ namespace autolaunch_crosshairx
                 {
                     if (!appToClose.WaitForExit(5000))
                     {
-                        Console.WriteLine();
-                        Console.WriteLine($"failed to shutdown {appToClose.ProcessName}, proceeding to force close");
+                       
+                        Logger.Instance.Log($"failed to shutdown {appToClose.ProcessName}, proceeding to force close");
                         appToClose.Kill();
                     }
                 }
@@ -33,7 +29,7 @@ namespace autolaunch_crosshairx
 
             catch (Exception ex)
             {
-                Console.WriteLine($"failed to exit app {appToClose.ProcessName}: {ex.Message}");
+                Logger.Instance.Log($"failed to exit app {appToClose.ProcessName}: {ex.Message}");
             }
             finally
             {
