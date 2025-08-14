@@ -7,6 +7,6 @@
     <RootNamespace>autolaunch_crosshairx</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <StartupObject>autolaunch_crosshairx.Program</StartupObject>
+    <StartupObject>autolaunch_crosshairx.AutolaunchApp</StartupObject>
   </PropertyGroup>
 </Project>

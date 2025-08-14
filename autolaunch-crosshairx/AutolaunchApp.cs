@@ -1,14 +1,13 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace autolaunch_crosshairx
 {
-    internal static partial class Program
+    internal static class AutolaunchApp
     {
 
         private static NotifyIcon? trayIcon;
         private static LogViewerForm? logViewerForm;
+        private static ManualResetEventSlim _waitForStart = new ManualResetEventSlim(true);
 
         [STAThread]
         static void Main(string[] args)
@@ -18,7 +17,7 @@ namespace autolaunch_crosshairx
 
             CreateTrayIcon();
 
-            Thread watcherThread = new Thread(WatchForProcesses)
+            Thread watcherThread = new(WatchForProcesses)
             {
                 IsBackground = true
             };
@@ -58,18 +57,21 @@ namespace autolaunch_crosshairx
                 Logger.Instance.Log("closing application...");
                 using (var viewer = new LogViewerForm(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "autolaunchapp.log")))
                 {
-                    viewer.ShowDialog(); 
+                    viewer.ShowDialog();
                 }
                 Environment.Exit(1);
             }
             var processesToWatchPaths = configLoader.GetAppsToWatch();
             string? processToOpenPath = configLoader.GetAppToOpen();
             string? processToOpenName = Path.GetFileNameWithoutExtension(processToOpenPath);
+            Process? startedProcess = null;
 
             Logger.Instance.Log("watching for apps to start...");
-            
+
             while (true)
             {
+                _waitForStart.Wait();
+
                 bool isAnyProcessToBeWatchedRunning = false;
 
                 foreach (var processToWatch in processesToWatchPaths)
@@ -79,40 +81,52 @@ namespace autolaunch_crosshairx
 
                     if (runningProcesses.Length > 0)
                     {
-                        Logger.Instance.Log($"detected {processName}");
                         isAnyProcessToBeWatchedRunning = true;
+                        if (startedProcess == null || startedProcess.HasExited)
+                        {
+                            Logger.Instance.Log($"detected {processName}");
+                        }
                         break;
                     }
                 }
 
-                var openProcesses = Process.GetProcessesByName(processToOpenName);
-
                 if (isAnyProcessToBeWatchedRunning)
                 {
-                    if (openProcesses.Length == 0)
+                    if (startedProcess == null || startedProcess.HasExited)
                     {
                         Logger.Instance.Log($"starting {processToOpenName}");
                         try
                         {
-                            Process.Start(processToOpenPath!);
+                            startedProcess = Process.Start(processToOpenPath!);
                         }
                         catch (Exception ex)
                         {
                             Logger.Instance.Log($"failed to open app: {ex.Message}");
+                            startedProcess = null;
                         }
                     }
                 }
                 else
                 {
-                    if (openProcesses.Length > 0)
-                    {
-                        Logger.Instance.Log($"closing {processToOpenName}");
-                        foreach (var proc in openProcesses)
+                    if (startedProcess != null)
+                        try
                         {
-                            ProcessCloser closer = new ProcessCloser(proc);
-                            closer.ShutdownProcess();
+                            startedProcess.Refresh();
+                            if (!startedProcess.HasExited)
+                            {
+                                Logger.Instance.Log("no app to be watched is running ");
+                                Logger.Instance.Log($"closing {processToOpenName}");
+                                ProcessCloser closer = new ProcessCloser(startedProcess);
+                                closer.ShutdownProcess();
+                            }
                         }
-                    }
+                        catch (InvalidOperationException)
+                        {
+                        }
+                        finally
+                        {
+                            startedProcess = null;
+                        }
                 }
                 Thread.Sleep(5000);
             }
@@ -125,10 +139,51 @@ namespace autolaunch_crosshairx
             if (logViewerForm == null || logViewerForm.IsDisposed)
             {
                 logViewerForm = new LogViewerForm(logFile);
+                logViewerForm.CommandEntered += LogViewerForm_CommandEntered;
             }
 
             logViewerForm.Show();
             logViewerForm.BringToFront();
+        }
+
+        private static void LogViewerForm_CommandEntered(object? sender, string command)
+        {
+            switch (command.ToLowerInvariant())
+            {
+                case "stop":
+                    if (!_waitForStart.IsSet)
+                    {
+                        Logger.Instance.Log("watcher already paused");
+                    }
+                    else
+                    {
+                        _waitForStart.Reset();
+                        Logger.Instance.Log("watcher paused by user input");    
+                    }
+                    break;
+
+                case "start":
+                    if (_waitForStart.IsSet)
+                    {
+                        Logger.Instance.Log("watcher already running");
+                    }
+                    else
+                    {
+                        _waitForStart.Set();
+                        Logger.Instance.Log("watcher resumed by user input");
+                    }
+                    break;
+
+                case "exit":
+                    Logger.Instance.Log("app closed by user input");
+                    Environment.Exit(1);
+                    break;
+
+                default:
+                    Logger.Instance.Log($"command '{command}' not recognized");
+                    break;
+            }
+            
         }
     }
 }

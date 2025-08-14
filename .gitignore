@@ -21,6 +21,7 @@ x86/
 .vs/
 *.dbmdl
 *.jfm
+.vscode
 
 # Rider / JetBrains
 .idea/
