@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.DirectoryServices.ActiveDirectory;
 
 namespace autolaunch_crosshairx
 {
@@ -64,7 +65,6 @@ namespace autolaunch_crosshairx
             var processesToWatchPaths = configLoader.GetAppsToWatch();
             string? processToOpenPath = configLoader.GetAppToOpen();
             string? processToOpenName = Path.GetFileNameWithoutExtension(processToOpenPath);
-            Process? startedProcess = null;
 
             Logger.Instance.Log("watching for apps to start...");
 
@@ -73,6 +73,7 @@ namespace autolaunch_crosshairx
                 _waitForStart.Wait();
 
                 bool isAnyProcessToBeWatchedRunning = false;
+                bool isProcessToBeOpenedRunning = Process.GetProcessesByName(processToOpenName).Length > 0;
 
                 foreach (var processToWatch in processesToWatchPaths)
                 {
@@ -82,7 +83,7 @@ namespace autolaunch_crosshairx
                     if (runningProcesses.Length > 0)
                     {
                         isAnyProcessToBeWatchedRunning = true;
-                        if (startedProcess == null || startedProcess.HasExited)
+                        if (!isProcessToBeOpenedRunning)
                         {
                             Logger.Instance.Log($"detected {processName}");
                         }
@@ -92,31 +93,37 @@ namespace autolaunch_crosshairx
 
                 if (isAnyProcessToBeWatchedRunning)
                 {
-                    if (startedProcess == null || startedProcess.HasExited)
+                    if (!isProcessToBeOpenedRunning)
                     {
                         Logger.Instance.Log($"starting {processToOpenName}");
                         try
                         {
-                            startedProcess = Process.Start(processToOpenPath!);
+                            using (Process process = new Process())
+                            {
+                                process.StartInfo.FileName = processToOpenPath;
+                                isProcessToBeOpenedRunning = process.Start();
+                            }                         
                         }
+
                         catch (Exception ex)
                         {
                             Logger.Instance.Log($"failed to open app: {ex.Message}");
-                            startedProcess = null;
+                            isProcessToBeOpenedRunning = false;
                         }
                     }
                 }
                 else
                 {
-                    if (startedProcess != null)
+                    if (isProcessToBeOpenedRunning)
                         try
                         {
-                            startedProcess.Refresh();
-                            if (!startedProcess.HasExited)
+                            Logger.Instance.Log("no app to be watched is running ");
+                            Logger.Instance.Log($"closing {processToOpenName}");
+
+                            var processesToBeClosed = Process.GetProcessesByName(processToOpenName);
+                            foreach (Process p in processesToBeClosed)
                             {
-                                Logger.Instance.Log("no app to be watched is running ");
-                                Logger.Instance.Log($"closing {processToOpenName}");
-                                ProcessCloser closer = new ProcessCloser(startedProcess);
+                                ProcessCloser closer = new ProcessCloser(p);
                                 closer.ShutdownProcess();
                             }
                         }
@@ -125,7 +132,7 @@ namespace autolaunch_crosshairx
                         }
                         finally
                         {
-                            startedProcess = null;
+                            
                         }
                 }
                 Thread.Sleep(5000);
