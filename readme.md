@@ -30,6 +30,7 @@ Download the latest release from the [releases page](https://github.com/s3ramis/
 1. go to the [releases](https://github.com/s3ramis/crosshairx-autolaunch/releases) section.
 2. download the latest `autolaunch_crosshairx.zip`.
 3. extract it anywhere on your system (excluding admin access folders).
+---
 
 ## usage
 
