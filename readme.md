@@ -10,12 +10,15 @@ C# Utility for launching an app, if another app has been detected to be running
 checks if apps specified by user are currently running
 
 - **process management**
+
 shuts down an app, with fallback to force kill if necessary
 
 - **single instance logger**
+
 centralized logging to a file with timestamped messages. avoids duplicate log entries
 
 - **ui logging window**
+
 small form to display runtime logs in real time
 supports command input
 
