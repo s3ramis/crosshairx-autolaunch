@@ -1,9 +1,8 @@
 ﻿using System.Diagnostics;
-using System.DirectoryServices.ActiveDirectory;
 
 namespace autolaunch_crosshairx
 {
-    internal static class AutolaunchApp
+    public static class AutolaunchApp
     {
 
         private static NotifyIcon? trayIcon;
@@ -18,7 +17,15 @@ namespace autolaunch_crosshairx
 
             CreateTrayIcon();
 
-            Thread watcherThread = new(WatchForProcesses)
+            var config = LoadConfiguration();
+            if (config == null)
+            {
+                ShowErrorAndExit();
+                return;
+            }
+
+            // isolate watch logic in seperate thread to keep ui responsive
+            Thread watcherThread = new(() => WatchForProcesses(config))
             {
                 IsBackground = true
             };
@@ -49,22 +56,36 @@ namespace autolaunch_crosshairx
             Environment.Exit(0);
         }
 
-        private static void WatchForProcesses()
+        private static ConfigData? LoadConfiguration()
         {
             string configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "programs.cfg");
             var configLoader = new ConfigReader(configFile);
+
             if (!configLoader.IsLoaded)
             {
-                Logger.Instance.Log("closing application...");
-                using (var viewer = new LogViewerForm(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "autolaunchapp.log")))
-                {
-                    viewer.ShowDialog();
-                }
-                Environment.Exit(1);
+                return null;
             }
-            var processesToWatchPaths = configLoader.GetAppsToWatch();
-            string? processToOpenPath = configLoader.GetAppToOpen();
-            string? processToOpenName = Path.GetFileNameWithoutExtension(processToOpenPath);
+
+            return new ConfigData
+            {
+                ProcessToOpen = configLoader.GetAppToOpen(),
+                ProcessesToWatch = configLoader.GetAppsToWatch()
+            };
+        }
+
+        private static void ShowErrorAndExit()
+        {
+            Logger.Instance.Log("closing application...");
+            using (var viewer = new LogViewerForm(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "autolaunchapp.log")))
+            {
+                viewer.ShowDialog();
+            }
+            Environment.Exit(1);
+        }
+
+        private static void WatchForProcesses(ConfigData config)
+        {
+            string? processToOpenName = Path.GetFileNameWithoutExtension(config.ProcessToOpen);
 
             Logger.Instance.Log("watching for apps to start...");
 
@@ -75,7 +96,8 @@ namespace autolaunch_crosshairx
                 bool isAnyProcessToBeWatchedRunning = false;
                 bool isProcessToBeOpenedRunning = Process.GetProcessesByName(processToOpenName).Length > 0;
 
-                foreach (var processToWatch in processesToWatchPaths)
+                // look for programs to be watched
+                foreach (var processToWatch in config.ProcessesToWatch)
                 {
                     string processName = Path.GetFileNameWithoutExtension(processToWatch);
                     var runningProcesses = Process.GetProcessesByName(processName);
@@ -95,20 +117,20 @@ namespace autolaunch_crosshairx
                 {
                     if (!isProcessToBeOpenedRunning)
                     {
+                        // any one apptobewatched is running but apptoopen isnt -> open apptoopen
                         Logger.Instance.Log($"starting {processToOpenName}");
                         try
                         {
                             using (Process process = new Process())
                             {
-                                process.StartInfo.FileName = processToOpenPath;
+                                process.StartInfo.FileName = config.ProcessToOpen;
                                 isProcessToBeOpenedRunning = process.Start();
-                            }                         
+                            }
                         }
 
                         catch (Exception ex)
                         {
                             Logger.Instance.Log($"failed to open app: {ex.Message}");
-                            isProcessToBeOpenedRunning = false;
                         }
                     }
                 }
@@ -117,6 +139,7 @@ namespace autolaunch_crosshairx
                     if (isProcessToBeOpenedRunning)
                         try
                         {
+                            // no apptobewatched running -> close apptoopen
                             Logger.Instance.Log("no app to be watched is running ");
                             Logger.Instance.Log($"closing {processToOpenName}");
 
@@ -129,16 +152,14 @@ namespace autolaunch_crosshairx
                         }
                         catch (InvalidOperationException)
                         {
-                        }
-                        finally
-                        {
-                            
+                            // if any process unexpectedly exited before process closer could close it
                         }
                 }
                 Thread.Sleep(5000);
             }
         }
 
+        // openlogviewer and start eventhandler for commands
         private static void OpenLogViewer()
         {
             string logFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "autolaunchapp.log");
@@ -153,6 +174,7 @@ namespace autolaunch_crosshairx
             logViewerForm.BringToFront();
         }
 
+        // handle commands entered in log viewer
         private static void LogViewerForm_CommandEntered(object? sender, string command)
         {
             switch (command.ToLowerInvariant())
@@ -165,7 +187,7 @@ namespace autolaunch_crosshairx
                     else
                     {
                         _waitForStart.Reset();
-                        Logger.Instance.Log("watcher paused by user input");    
+                        Logger.Instance.Log("watcher paused by user input");
                     }
                     break;
 
@@ -190,7 +212,14 @@ namespace autolaunch_crosshairx
                     Logger.Instance.Log($"command '{command}' not recognized");
                     break;
             }
-            
+
+        }
+
+        // helper class for config data
+        private class ConfigData
+        {
+            public List<string> ProcessesToWatch { get; set; } = new();
+            public string? ProcessToOpen { get; set; }
         }
     }
 }

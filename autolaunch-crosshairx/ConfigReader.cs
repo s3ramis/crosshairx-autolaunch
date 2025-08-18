@@ -1,6 +1,15 @@
-using System;
-
 namespace autolaunch_crosshairx;
+
+/*
+expected config layout:
+
+open app:
+"C:\Path\To\App.exe"
+
+watch apps:
+"C:\Path\To\First\App.exe"
+"C:\Path\To\Second\App.exe"
+*/
 
 public class ConfigReader
 {
@@ -23,8 +32,8 @@ public class ConfigReader
             _lines = File.ReadAllLines(_configFilePath)
                     .Where(line => !string.IsNullOrWhiteSpace(line))
                     .ToList();
-
-            if (GetSingleApp(_lines, "open app:") != null && GetMultipleApps(_lines, "watch apps:").Count > 0)
+            // open app AND at least one app to watch must exist
+            if (GetApps(_lines, "open app:") != null && GetApps(_lines, "watch apps:").Count > 0)
             {
                 Logger.Instance.Log("config successfully loaded");
                 IsLoaded = true;
@@ -38,37 +47,15 @@ public class ConfigReader
 
     public string? GetAppToOpen()
     {
-        return GetSingleApp(_lines, "open app:");
+        return GetApps(_lines, "open app:", true).FirstOrDefault();
     }
 
     public List<string> GetAppsToWatch()
     {
-        return GetMultipleApps(_lines, "watch apps:");
+        return GetApps(_lines, "watch apps:");
     }
 
-    private static string? GetSingleApp(List<string> lines, string section)
-    {
-        string? currentSection = null;
-
-        foreach (var line in lines)
-        {
-            var trimmedLine = line.Trim();
-
-            if (trimmedLine.EndsWith(':'))
-            {
-                currentSection = trimmedLine.ToLowerInvariant();
-                continue;
-            }
-
-            if (currentSection == section && trimmedLine.StartsWith('\"') && trimmedLine.EndsWith('\"'))
-            {
-                return trimmedLine.Trim('\"');
-            }
-        }
-        return null;
-    }
-
-    private static List<string> GetMultipleApps(List<string> lines, string section)
+    private static List<string> GetApps(List<string> lines, string section, bool single = false)
     {
         List<string> apps = [];
 
@@ -78,15 +65,21 @@ public class ConfigReader
         {
             var trimmedLine = line.Trim();
 
+            // look for section marker
             if (trimmedLine.EndsWith(':'))
             {
                 currentSection = trimmedLine.ToLowerInvariant();
                 continue;
             }
 
+            // get filepaths after specified section marker
             if (currentSection == section && trimmedLine.StartsWith('\"') && trimmedLine.EndsWith('\"'))
             {
                 apps.Add(trimmedLine.Trim('\"'));
+                if (single)
+                {
+                    break;
+                }
             }
         }
         return apps;

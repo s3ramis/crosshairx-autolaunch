@@ -4,20 +4,16 @@ using System.Runtime.CompilerServices;
 
 namespace autolaunch_crosshairx
 {
-
-    public class ProcessCloser
+    // handles shutdown for a specified process
+    public class ProcessCloser(Process processToClose)
     {
-        private readonly Process _processToClose;
-
-        public ProcessCloser(Process processToClose)
-        {
-            _processToClose = processToClose ?? throw new ArgumentNullException(nameof(processToClose));
-        }
+        private readonly Process _processToClose = processToClose ?? throw new ArgumentNullException(nameof(processToClose));
 
         public void ShutdownProcess()
         {
             try
             {
+                // tries to shutdown the process, with fallback to forceclose Process.Kill
                 if (!TryCloseProcess(_processToClose))
                 {
                     Logger.Instance.Log($"failed to shutdown {_processToClose.ProcessName}");
@@ -34,15 +30,17 @@ namespace autolaunch_crosshairx
             }
         }
 
-        private bool TryCloseProcess(Process process)
+        private static bool TryCloseProcess(Process process)
         {
             if (process == null || process.HasExited)
             {
+                // process has ended on its own -> return true
                 return true;
             }
 
             try
             {
+                // graceful shutdown
                 if (process.CloseMainWindow())
                 {
                     if (process.WaitForExit(5000))
@@ -50,6 +48,7 @@ namespace autolaunch_crosshairx
                         return true;
                     }
                 }
+                // forceclose + log
                 Logger.Instance.Log($"graceful shutdown failed, proceeding to force close {process.ProcessName}");
                 process.Kill();
                 process.WaitForExit(3000);
