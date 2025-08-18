@@ -41,9 +41,13 @@ assuming the zip file has been downloaded and extracted:
 
 the app specified under `open app:` in the `programs.cfg` file should now open automatically
 if any app specified under  `watch apps:` in the `programs.cfg` is detected to be running
-if you want to use the 'app to be opened' without having a app it depends on open, you can open
+
+if you want to use the 'app to be opened' without having an app it depends on open, you can open
 the log viewer via the system tray icon (double clicking or right click -> open log) and inputting
-the `stop` command, to prevent the app closing. if you wish to continue the app watching utility,
+the `stop` command, to prevent the app closing.
+
+if you wish to continue the app watching utility,
 input `start` into the log viewer.
-the app can be closed either by rightclicking the system tray icon and choosing the respective button
-or inputtin the `exit` command into the log viewer
+
+the app can be closed either by rightclicking the system tray
+icon and choosing the respective button or inputtin the `exit` command into the log viewer
