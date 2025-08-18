@@ -24,7 +24,7 @@ supports command input
 3. `exit` to close the app
 
 ---
-
+## install
 Download the latest release from the [releases page](https://github.com/s3ramis/crosshairx-autolaunch/releases).
 
 1. go to the [releases](https://github.com/s3ramis/crosshairx-autolaunch/releases) section.
