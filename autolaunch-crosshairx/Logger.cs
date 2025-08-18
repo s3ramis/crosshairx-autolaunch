@@ -3,7 +3,7 @@ namespace autolaunch_crosshairx;
 // single instance logger to prevent write conflicts if used in different threads
 public sealed class Logger
 {
-    private static readonly Lazy<Logger> _instance = new Lazy<Logger>(() => new Logger());
+    private static readonly Lazy<Logger> _instance = new(() => new Logger());
     private readonly string logFilePath;
     // store last message to prevent duplicate consecutive log entries
     private string? _lastMessage;
@@ -42,7 +42,7 @@ public sealed class Logger
             _lastMessage = message;
 
             string timestampedMessage = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}{Environment.NewLine}";
-            
+
             File.AppendAllText(logFilePath, timestampedMessage);
         }
         catch (Exception ex)

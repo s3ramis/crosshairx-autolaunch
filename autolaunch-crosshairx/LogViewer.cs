@@ -7,7 +7,7 @@ namespace autolaunch_crosshairx
         private readonly string _logFilePath;
         private FileSystemWatcher logWatcher = null!;
     
-        //triggered when command is entered in the input box
+        // triggered when command is entered in the input box
         public EventHandler<string>? CommandEntered;
 
         public LogViewerForm(string logFilePath)
@@ -67,7 +67,7 @@ namespace autolaunch_crosshairx
             };
         }
 
-        private TextBox CreateInputTextBox()
+        private static TextBox CreateInputTextBox()
         {
             return new TextBox
             {

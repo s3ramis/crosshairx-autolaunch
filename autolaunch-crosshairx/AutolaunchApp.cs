@@ -7,7 +7,7 @@ namespace autolaunch_crosshairx
 
         private static NotifyIcon? trayIcon;
         private static LogViewerForm? logViewerForm;
-        private static ManualResetEventSlim _waitForStart = new ManualResetEventSlim(true);
+        private static readonly ManualResetEventSlim _waitForStart = new(true);
 
         [STAThread]
         static void Main(string[] args)
@@ -121,7 +121,7 @@ namespace autolaunch_crosshairx
                         Logger.Instance.Log($"starting {processToOpenName}");
                         try
                         {
-                            using (Process process = new Process())
+                            using (Process process = new())
                             {
                                 process.StartInfo.FileName = config.ProcessToOpen;
                                 isProcessToBeOpenedRunning = process.Start();
