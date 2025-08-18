@@ -2,8 +2,8 @@ namespace autolaunch_crosshairx
 {
     public class LogViewerForm : Form
     {
-        private readonly TextBox logTextBox = null!;
-        private readonly TextBox inputTextBox = null!;
+        private  TextBox logTextBox;
+        private  TextBox inputTextBox;
         private readonly string _logFilePath;
         private FileSystemWatcher logWatcher = null!;
     
@@ -15,7 +15,9 @@ namespace autolaunch_crosshairx
             _logFilePath = logFilePath;
 
             InitializeForm();
-            InitializeControls(CreateInputTextBox(), CreateLogTextBox());
+            logTextBox = CreateLogTextBox();
+            inputTextBox = CreateInputTextBox();
+            InitializeControls(inputTextBox, logTextBox);
 
             LoadLog();
             WatchLogFile();
