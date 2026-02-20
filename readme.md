@@ -40,8 +40,8 @@ assuming the zip file has been downloaded and extracted:
 2. start `autolaunch-crosshairx.exe`
 3. (optionally) put a shortcut to the exe in autostart
 
-the app specified under `open app:` in the `programs.cfg` file should now open automatically
-if any app specified under  `watch apps:` in the `programs.cfg` is detected to be running
+there are named watch-groups, each with a single app to be opened and a array of apps that should trigger the opening process
+watch-groups can be named and expanded indefinitely, just make sure to conform to json syntax
 
 if you want to use the 'app to be opened' without having an app it depends on open, you can open
 the log viewer via the system tray icon (double clicking or right click -> open log) and inputting
