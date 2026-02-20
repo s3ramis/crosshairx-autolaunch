@@ -43,11 +43,11 @@ public class ConfigReader
                 ReadCommentHandling = JsonCommentHandling.Skip
             };
 
-            var parsed = JsonSerializer.Deserialize<ConfigData> (json, options);
+            var parsedConfig = JsonSerializer.Deserialize<ConfigData> (json, options);
+            var cleanedConfig = CleanConfig(parsedConfig);
 
-            if (HasAnyValidRule(parsed))
+            if (cleanedConfig?.Apps.Count > 0)
             {
-                Config = Normalize(parsed);
                 Logger.Instance.Log("config successfully loaded");
                 IsLoaded = true;
             }
@@ -66,28 +66,29 @@ public class ConfigReader
         }
     }
 
-    private static ConfigData? Normalize(ConfigData? cfg)
+    private static ConfigData? CleanConfig(ConfigData? cfg)
     {
         if (cfg == null) return null;
 
-        // wir filtern kaputte Einträge raus, statt komplett zu failen
         var normalized = new ConfigData();
 
         foreach (var dict in cfg.Apps ?? new())
         {
             if (dict == null || dict.Count == 0) continue;
 
-            var cleaned = new Dictionary<string, AppRule>(StringComparer.OrdinalIgnoreCase);
+            var cleaned = new Dictionary<string, ConfigSegment>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var kvp in dict)
             {
+                // return empty string if key is empty to prevent key.trim from throwing exception
                 string id = kvp.Key?.Trim() ?? "";
-                AppRule? rule = kvp.Value;
+                ConfigSegment? rule = kvp.Value;
 
                 if (string.IsNullOrWhiteSpace(id) || rule == null)
                     continue;
 
                 rule.Open = rule.Open?.Trim() ?? "";
+                // try to convert json array to list of string otherwise return empty list 
                 rule.Watch = rule.Watch?.Where(w => !string.IsNullOrWhiteSpace(w)).Select(w => w.Trim()).ToList()
                              ?? new List<string>();
 
@@ -104,27 +105,5 @@ public class ConfigReader
         }
 
         return normalized;
-    }
-
-    private static bool HasAnyValidRule(ConfigData? cfg)
-    {
-        if (cfg?.Apps == null || cfg.Apps.Count == 0)
-            return false;
-
-        foreach (var dict in cfg.Apps)
-        {
-            if (dict == null) continue;
-            foreach (var kvp in dict)
-            {
-                if (kvp.Value == null) continue;
-                if (!string.IsNullOrWhiteSpace(kvp.Key) &&
-                    !string.IsNullOrWhiteSpace(kvp.Value.Open) &&
-                    kvp.Value.Watch != null && kvp.Value.Watch.Count > 0)
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }

@@ -82,7 +82,7 @@ namespace autolaunch_app
         private static void WatchForProcesses(ConfigData config)
         {
             // single out config file into watchapp-openapp relations
-            var rules = SingleOutRules(config).ToList();
+            var rules = SplitConfig(config).ToList();
             if (rules.Count == 0)
             {
                 Logger.Instance.Log("no valid rules found in config, watcher stopped");
@@ -103,7 +103,7 @@ namespace autolaunch_app
                 foreach (var openGroup in openGroups)
                 {
                     string openPath = openGroup.Key;
-                    string? openName = SaveProcessNameFromPath(openPath);
+                    string? openName = GetProcessNameFromPath(openPath);
 
                     if (openName == null)
                     {
@@ -116,12 +116,12 @@ namespace autolaunch_app
                     bool shouldBeOpen = false;
                     string? triggerInfo = null;
 
-                    // irgendein Watch in irgendeiner Regel dieser Open-Gruppe?
+                    // check if watch apps are running for each app to be opened
                     foreach (var rule in openGroup)
                     {
                         foreach (var watchPath in rule.WatchPaths)
                         {
-                            string? watchName = SaveProcessNameFromPath(watchPath);
+                            string? watchName = GetProcessNameFromPath(watchPath);
                             if (watchName == null)
                                 continue;
 
@@ -148,8 +148,7 @@ namespace autolaunch_app
                             try
                             {
                                 using Process p = new();
-                                var unescapedPath = openPath.Replace("\\\\", "\\");
-                                p.StartInfo.FileName = unescapedPath;
+                                p.StartInfo.FileName = openPath;
                                 p.Start();
                             }
                             catch (Exception ex)
@@ -242,43 +241,45 @@ namespace autolaunch_app
         }
 
         // --- helpers for config handling --
-        private sealed class SingleRule
+        private sealed class ConfigSegment
         {
             public string Id { get; init; } = "";
             public string OpenPath { get; init; } = "";
             public List<string> WatchPaths { get; init; } = new();
         }
-        private static IEnumerable<SingleRule> SingleOutRules(ConfigData config)
+        private static IEnumerable<ConfigSegment> SplitConfig(ConfigData config)
         {
+            // returns only correctly formatted config segments
             foreach (var dict in config.Apps)
             {
                 if (dict == null) continue;
                 foreach (var kvp in dict)
                 {
-                    string id = kvp.Key?.Trim() ?? "";
-                    var rule = kvp.Value;
 
-                    if (string.IsNullOrWhiteSpace(id) || rule == null)
+                    string cfgSegmentId = kvp.Key?.Trim() ?? "";
+                    var cfgSegment = kvp.Value;
+
+                    if (string.IsNullOrWhiteSpace(cfgSegmentId) || cfgSegment == null)
+                    {
+                        continue;
+                    }
+                    //  no program to be opened || program to watch array not defined || program to watch array empty
+                    if  (string.IsNullOrWhiteSpace(cfgSegment.Open) || cfgSegment.Watch == null || cfgSegment.Watch.Count == 0)
                     {
                         continue;
                     }
 
-                    if (string.IsNullOrWhiteSpace(rule.Open) || rule.Watch == null || rule.Watch.Count == 0)
+                    yield return new ConfigSegment
                     {
-                        continue;
-                    }
-
-                    yield return new SingleRule
-                    {
-                        Id = id,
-                        OpenPath = rule.Open,
-                        WatchPaths = rule.Watch
+                        Id = cfgSegmentId,
+                        OpenPath = cfgSegment.Open,
+                        WatchPaths = cfgSegment.Watch
                     };
                 }
             }
         }
 
-        private static string? SaveProcessNameFromPath(string? path)
+        private static string? GetProcessNameFromPath(string? path)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -286,6 +287,7 @@ namespace autolaunch_app
             }
 
             string name = Path.GetFileNameWithoutExtension(path.Trim());
+            // return null if name is emtpy else return process name,
             return string.IsNullOrWhiteSpace(name) ? null : name;
         }
     }   
