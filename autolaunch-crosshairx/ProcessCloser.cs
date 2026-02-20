@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace autolaunch_crosshairx
+namespace autolaunch_app
 {
     // handles shutdown for a specified process
     public class ProcessCloser(Process processToClose)
@@ -40,7 +40,7 @@ namespace autolaunch_crosshairx
 
             try
             {
-                // graceful shutdown
+                // soft shutdown
                 if (process.CloseMainWindow())
                 {
                     if (process.WaitForExit(5000))
@@ -49,7 +49,7 @@ namespace autolaunch_crosshairx
                     }
                 }
                 // forceclose + log
-                Logger.Instance.Log($"graceful shutdown failed, proceeding to force close {process.ProcessName}");
+                Logger.Instance.Log($"soft shutdown failed, proceeding to force close {process.ProcessName}");
                 process.Kill();
                 process.WaitForExit(3000);
                 return true;

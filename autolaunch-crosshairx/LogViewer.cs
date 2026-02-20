@@ -1,4 +1,4 @@
-namespace autolaunch_crosshairx
+namespace autolaunch_app
 {
     public class LogViewerForm : Form
     {

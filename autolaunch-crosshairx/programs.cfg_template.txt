@@ -1,7 +1,22 @@
-open app:
-"C:\Program Files\1\1.exe"
-
-watch apps:
-"C:\Program Files\a\a.exe"
-"C:\Program Files\b\b.exe"
-"C:\Program Files\c\c.exe"
+{
+    "apps": [
+        {
+            "app1":
+            {
+                "open": "C:\\Path\\To\\Executable\\.exe",
+                "watch": [
+                "C:\\Path\\To\\Executable\\.exe",
+                "C:\\Path\\To\\Executable2\\.exe"
+                ]
+            },
+            "app2":
+            {
+                "open": "C:\\Path\\To\\Executable\\.exe",
+                "watch": [
+                    "C:\\Path\\To\\Executable\\.exe",
+                    "C:\\Path\\To\\Executable2\\.exe"
+                ]
+            }
+        }
+    ]
+}

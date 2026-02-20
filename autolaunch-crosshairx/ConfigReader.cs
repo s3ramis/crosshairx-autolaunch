@@ -1,20 +1,24 @@
-namespace autolaunch_crosshairx;
+using System.Text.Json;
+
+namespace autolaunch_app;
 
 /*
-expected config layout:
+expected config layout (json):
 
-open app:
-"C:\Path\To\App.exe"
-
-watch apps:
-"C:\Path\To\First\App.exe"
-"C:\Path\To\Second\App.exe"
+{
+  "apps": [
+    {
+      "app1": { "open": "...", "watch": ["...", "..."] },
+      "app2": { "open": "...", "watch": ["...", "..."] }
+    }
+  ]
+}
 */
 
 public class ConfigReader
 {
     private readonly string _configFilePath;
-    private readonly List<string> _lines = [];
+    public ConfigData? Config { get; private set; }
     public bool IsLoaded { get; private set; } = false;
 
     public ConfigReader(string configFilePath)
@@ -27,61 +31,98 @@ public class ConfigReader
 
             return;
         }
-        else
+
+        try
         {
-            _lines = File.ReadAllLines(_configFilePath)
-                    .Where(line => !string.IsNullOrWhiteSpace(line))
-                    .ToList();
-            // open app AND at least one app to watch must exist
-            if (GetApps(_lines, "open app:") != null && GetApps(_lines, "watch apps:").Count > 0)
+            string json = File.ReadAllText(_configFilePath);
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                AllowTrailingCommas = true,
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
+
+            var parsed = JsonSerializer.Deserialize<ConfigData> (json, options);
+
+            if (HasAnyValidRule(Config))
             {
                 Logger.Instance.Log("config successfully loaded");
-                IsLoaded = true;
             }
             else
             {
-                Logger.Instance.Log("cfg file has wrong layout");
+                Logger.Instance.Log("config has wrong layout");
             }
+        }
+        catch (JsonException ex)
+        {
+            Logger.Instance.Log($"config has invalid jason: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Log($"failed to read config: {ex.Message}");
         }
     }
 
-    public string? GetAppToOpen()
+     private static ConfigData? Normalize(ConfigData? cfg)
     {
-        return GetApps(_lines, "open app:", true).FirstOrDefault();
-    }
+        if (cfg == null) return null;
 
-    public List<string> GetAppsToWatch()
-    {
-        return GetApps(_lines, "watch apps:");
-    }
+        // wir filtern kaputte Einträge raus, statt komplett zu failen
+        var normalized = new ConfigData();
 
-    private static List<string> GetApps(List<string> lines, string section, bool single = false)
-    {
-        List<string> apps = [];
-
-        string? currentSection = null;
-
-        foreach (var line in lines)
+        foreach (var dict in cfg.Apps ?? new())
         {
-            var trimmedLine = line.Trim();
+            if (dict == null || dict.Count == 0) continue;
 
-            // look for section marker
-            if (trimmedLine.EndsWith(':'))
+            var cleaned = new Dictionary<string, AppRule>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var kvp in dict)
             {
-                currentSection = trimmedLine.ToLowerInvariant();
-                continue;
+                string id = kvp.Key?.Trim() ?? "";
+                AppRule? rule = kvp.Value;
+
+                if (string.IsNullOrWhiteSpace(id) || rule == null)
+                    continue;
+
+                rule.Open = rule.Open?.Trim() ?? "";
+                rule.Watch = rule.Watch?.Where(w => !string.IsNullOrWhiteSpace(w)).Select(w => w.Trim()).ToList()
+                             ?? new List<string>();
+
+                if (string.IsNullOrWhiteSpace(rule.Open) || rule.Watch.Count == 0)
+                {
+                    Logger.Instance.Log($"ignoring invalid rule '{id}' (open/watch missing)");
+                    continue;
+                }
+                cleaned[id] = rule;
             }
 
-            // get filepaths after specified section marker
-            if (currentSection == section && trimmedLine.StartsWith('\"') && trimmedLine.EndsWith('\"'))
+            if (cleaned.Count > 0)
+                normalized.Apps.Add(cleaned);
+        }
+
+        return normalized;
+    }
+
+    private static bool HasAnyValidRule(ConfigData? cfg)
+    {
+        if (cfg?.Apps == null || cfg.Apps.Count == 0)
+            return false;
+
+        foreach (var dict in cfg.Apps)
+        {
+            if (dict == null) continue;
+            foreach (var kvp in dict)
             {
-                apps.Add(trimmedLine.Trim('\"'));
-                if (single)
+                if (kvp.Value == null) continue;
+                if (!string.IsNullOrWhiteSpace(kvp.Key) &&
+                    !string.IsNullOrWhiteSpace(kvp.Value.Open) &&
+                    kvp.Value.Watch != null && kvp.Value.Watch.Count > 0)
                 {
-                    break;
+                    return true;
                 }
             }
         }
-        return apps;
+        return false;
     }
 }

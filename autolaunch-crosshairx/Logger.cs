@@ -1,4 +1,4 @@
-namespace autolaunch_crosshairx;
+namespace autolaunch_app;
 
 // single instance logger to prevent write conflicts if used in different threads
 public sealed class Logger

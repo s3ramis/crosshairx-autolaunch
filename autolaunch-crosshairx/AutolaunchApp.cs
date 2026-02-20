@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace autolaunch_crosshairx
+namespace autolaunch_app
 {
     public static class AutolaunchApp
     {
@@ -61,16 +61,12 @@ namespace autolaunch_crosshairx
             string configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "programs.cfg");
             var configLoader = new ConfigReader(configFile);
 
-            if (!configLoader.IsLoaded)
+            if (!configLoader.IsLoaded || configLoader == null)
             {
                 return null;
             }
 
-            return new ConfigData
-            {
-                ProcessToOpen = configLoader.GetAppToOpen(),
-                ProcessesToWatch = configLoader.GetAppsToWatch()
-            };
+            return configLoader.Config;
         }
 
         private static void ShowErrorAndExit()
@@ -85,76 +81,106 @@ namespace autolaunch_crosshairx
 
         private static void WatchForProcesses(ConfigData config)
         {
-            string? processToOpenName = Path.GetFileNameWithoutExtension(config.ProcessToOpen);
+            // single out config file into watchapp-openapp relations
+            var rules = SingleOutRules(config).ToList();
+            if (rules.Count == 0)
+            {
+                Logger.Instance.Log("no valid rules found in config, watcher stopped");
+                return;
+            }
+
+            var openGroups = rules
+                .GroupBy(rule => rule.OpenPath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             Logger.Instance.Log("watching for apps to start...");
 
-            while (true)
+            // main loop
+             while (true)
             {
                 _waitForStart.Wait();
 
-                bool isAnyProcessToBeWatchedRunning = false;
-                bool isProcessToBeOpenedRunning = Process.GetProcessesByName(processToOpenName).Length > 0;
-
-                // look for programs to be watched
-                foreach (var processToWatch in config.ProcessesToWatch)
+                foreach (var openGroup in openGroups)
                 {
-                    string processName = Path.GetFileNameWithoutExtension(processToWatch);
-                    var runningProcesses = Process.GetProcessesByName(processName);
+                    string openPath = openGroup.Key;
+                    string? openName = SaveProcessNameFromPath(openPath);
 
-                    if (runningProcesses.Length > 0)
+                    if (openName == null)
                     {
-                        isAnyProcessToBeWatchedRunning = true;
-                        if (!isProcessToBeOpenedRunning)
-                        {
-                            Logger.Instance.Log($"detected {processName}");
-                        }
-                        break;
+                        Logger.Instance.Log($"invalid open path in config: '{openPath}'");
+                        continue;
                     }
-                }
 
-                if (isAnyProcessToBeWatchedRunning)
-                {
-                    if (!isProcessToBeOpenedRunning)
+                    bool isOpenRunning = Process.GetProcessesByName(openName).Length > 0;
+
+                    bool shouldBeOpen = false;
+                    string? triggerInfo = null;
+
+                    // irgendein Watch in irgendeiner Regel dieser Open-Gruppe?
+                    foreach (var rule in openGroup)
                     {
-                        // any one apptobewatched is running but apptoopen isnt -> open apptoopen
-                        Logger.Instance.Log($"starting {processToOpenName}");
-                        try
+                        foreach (var watchPath in rule.WatchPaths)
                         {
-                            using (Process process = new())
+                            string? watchName = SaveProcessNameFromPath(watchPath);
+                            if (watchName == null)
+                                continue;
+
+                            if (Process.GetProcessesByName(watchName).Length > 0)
                             {
-                                process.StartInfo.FileName = config.ProcessToOpen;
-                                isProcessToBeOpenedRunning = process.Start();
+                                shouldBeOpen = true;
+                                triggerInfo = $"{watchName} (config id: {rule.Id})";
+                                break;
                             }
                         }
 
-                        catch (Exception ex)
+                        if (shouldBeOpen)
+                            break;
+                    }
+
+                    if (shouldBeOpen)
+                    {
+                        if (!isOpenRunning)
                         {
-                            Logger.Instance.Log($"failed to open app: {ex.Message}");
+                            if (triggerInfo != null)
+                                Logger.Instance.Log($"detected {triggerInfo}");
+
+                            Logger.Instance.Log($"starting {openName}");
+                            try
+                            {
+                                using Process p = new();
+                                p.StartInfo.FileName = openPath;
+                                p.Start();
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Instance.Log($"failed to open app '{openName}': {ex.Message}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (isOpenRunning)
+                        {
+                            try
+                            {
+                                Logger.Instance.Log($"no watch app running for '{openName}'");
+                                Logger.Instance.Log($"closing {openName}");
+
+                                var processesToBeClosed = Process.GetProcessesByName(openName);
+                                foreach (Process p in processesToBeClosed)
+                                {
+                                    ProcessCloser closer = new ProcessCloser(p);
+                                    closer.ShutdownProcess();
+                                }
+                            }
+                            catch (InvalidOperationException)
+                            {
+                                // process exited unexpectedly
+                            }
                         }
                     }
                 }
-                else
-                {
-                    if (isProcessToBeOpenedRunning)
-                        try
-                        {
-                            // no apptobewatched running -> close apptoopen
-                            Logger.Instance.Log("no app to be watched is running ");
-                            Logger.Instance.Log($"closing {processToOpenName}");
 
-                            var processesToBeClosed = Process.GetProcessesByName(processToOpenName);
-                            foreach (Process p in processesToBeClosed)
-                            {
-                                ProcessCloser closer = new ProcessCloser(p);
-                                closer.ShutdownProcess();
-                            }
-                        }
-                        catch (InvalidOperationException)
-                        {
-                            // if any process unexpectedly exited before process closer could close it
-                        }
-                }
                 Thread.Sleep(5000);
             }
         }
@@ -212,14 +238,54 @@ namespace autolaunch_crosshairx
                     Logger.Instance.Log($"command '{command}' not recognized");
                     break;
             }
-
         }
 
-        // helper class for config data
-        private class ConfigData
+        // --- helpers for config handling --
+        private sealed class SingleRule
         {
-            public List<string> ProcessesToWatch { get; set; } = new();
-            public string? ProcessToOpen { get; set; }
+            public string Id { get; init; } = "";
+            public string OpenPath { get; init; } = "";
+            public List<string> WatchPaths { get; init; } = new();
         }
-    }
+        private static IEnumerable<SingleRule> SingleOutRules(ConfigData config)
+        {
+            foreach (var dict in config.Apps)
+            {
+                if (dict == null) continue;
+                foreach (var kvp in dict)
+                {
+                    string id = kvp.Key?.Trim() ?? "";
+                    var rule = kvp.Value;
+
+                    if (string.IsNullOrWhiteSpace(id) || rule == null)
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(rule.Open) || rule.Watch == null || rule.Watch.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    yield return new SingleRule
+                    {
+                        Id = id,
+                        OpenPath = rule.Open,
+                        WatchPaths = rule.Watch
+                    };
+                }
+            }
+        }
+
+        private static string? SaveProcessNameFromPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            string name = Path.GetFileNameWithoutExtension(path.Trim());
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+    }   
 }
