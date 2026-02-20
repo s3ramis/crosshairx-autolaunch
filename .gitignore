@@ -64,3 +64,5 @@ TestResults/
 # Configuration
 appsettings.Development.json
 appsettings.Local.json
+
+*klump.txt

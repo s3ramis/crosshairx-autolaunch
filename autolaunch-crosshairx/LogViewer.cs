@@ -65,7 +65,7 @@ namespace autolaunch_app
                 BackColor = Color.Black,
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                WordWrap = false
+                WordWrap = true
             };
         }
 
@@ -99,9 +99,17 @@ namespace autolaunch_app
         {
             if (!File.Exists(_logFilePath)) return;
 
+            try
+            {
             string logText = File.ReadAllText(_logFilePath);
             logTextBox.Text = logText;
-            ScrollToBottom();
+            ScrollToBottom();    
+            }
+            catch (IOException)
+            {
+                // egal
+            }
+            
         }
 
 

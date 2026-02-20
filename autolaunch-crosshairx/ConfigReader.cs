@@ -45,9 +45,11 @@ public class ConfigReader
 
             var parsed = JsonSerializer.Deserialize<ConfigData> (json, options);
 
-            if (HasAnyValidRule(Config))
+            if (HasAnyValidRule(parsed))
             {
+                Config = Normalize(parsed);
                 Logger.Instance.Log("config successfully loaded");
+                IsLoaded = true;
             }
             else
             {
@@ -64,7 +66,7 @@ public class ConfigReader
         }
     }
 
-     private static ConfigData? Normalize(ConfigData? cfg)
+    private static ConfigData? Normalize(ConfigData? cfg)
     {
         if (cfg == null) return null;
 

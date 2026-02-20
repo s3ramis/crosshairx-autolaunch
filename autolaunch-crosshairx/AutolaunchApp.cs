@@ -148,7 +148,8 @@ namespace autolaunch_app
                             try
                             {
                                 using Process p = new();
-                                p.StartInfo.FileName = openPath;
+                                var unescapedPath = openPath.Replace("\\\\", "\\");
+                                p.StartInfo.FileName = unescapedPath;
                                 p.Start();
                             }
                             catch (Exception ex)
