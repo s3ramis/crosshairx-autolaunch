@@ -55,6 +55,7 @@ public class ConfigReader
             {
                 Logger.Instance.Log("config has wrong layout");
             }
+            Config  = cleanedConfig;
         }
         catch (JsonException ex)
         {
