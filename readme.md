@@ -1,4 +1,4 @@
-# outdated, currently to lazy to fix#
+# outdated, currently to lazy to fix
 
 # autolaunch app
 
