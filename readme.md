@@ -1,3 +1,5 @@
+# outdated, currently to lazy to fix#
+
 # autolaunch app
 
 C# Utility for launching an app, if another app has been detected to be running
