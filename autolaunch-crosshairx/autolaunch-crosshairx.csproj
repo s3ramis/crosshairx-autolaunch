@@ -9,4 +9,8 @@
     <Nullable>enable</Nullable>
     <StartupObject>autolaunch_app.AutolaunchApp</StartupObject>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.3" />
+  </ItemGroup>
 </Project>
