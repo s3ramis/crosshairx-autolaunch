@@ -6,7 +6,7 @@ namespace autolaunch_app;
 
 public sealed partial class AppWatcher
 {
-    private void CreateRuntimeStructureForConfig()
+    private void CompileConfig()
     {
         // reset previously built segments/groups
         _segments.Clear();

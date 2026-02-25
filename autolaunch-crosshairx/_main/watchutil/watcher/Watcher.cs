@@ -56,7 +56,7 @@ public sealed partial class AppWatcher : IDisposable
         if (_started) return;
         
         // translate the config into a format the app watcher can unterstand
-        CreateRuntimeStructureForConfig();
+        CompileConfig();
 
         if (_segments.Count == 0)
         {

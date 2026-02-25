@@ -33,10 +33,16 @@ public sealed partial class AppWatcher
 
         try
         {
+            _mode = WmiMode.Trace;
             var scope = CreateScope();
 
+            string filter = BuildWqlFilterString("ProcessName");
+
+            string startWqlQuery = "SELECT * FROM Win32_ProcessStartTrace";
+            if (!string.IsNullOrWhiteSpace(filter))
+                startWqlQuery += " WHERE " + filter;
             // subscribe to process-started events
-            _startWatcher = new ManagementEventWatcher(scope, new WqlEventQuery("SELECT * FROM Win32_ProcessStartTrace"));
+            _startWatcher = new ManagementEventWatcher(scope, new WqlEventQuery(startWqlQuery));
             _startWatcher.EventArrived += (_, e) => HandleWmiEvent(e, started: true);
             _startWatcher.Start();
 
@@ -44,7 +50,6 @@ public sealed partial class AppWatcher
             _stopWatcher = new ManagementEventWatcher(scope, new WqlEventQuery("SELECT * FROM Win32_ProcessStopTrace"));
             _stopWatcher.EventArrived += (_, e) => HandleWmiEvent(e, started: false);
             _stopWatcher.Start();
-            _mode = WmiMode.Trace;
             return true;
         }
         catch (ManagementException mex)
@@ -74,13 +79,14 @@ public sealed partial class AppWatcher
 
         try
         {
+            _mode = WmiMode.Instance;
             var scope = CreateScope();
 
             // only process instances
             string condition = "TargetInstance ISA 'Win32_Process'";
 
             // build filter for event subscriber so only events concerning apps listed in config will be paid attention to
-            string filter = BuildInstanceNameFilter();
+            string filter = BuildWqlFilterString("TargetInstance.Name");
             if (!string.IsNullOrWhiteSpace(filter))
                 condition += " AND " + filter;
 
@@ -95,8 +101,6 @@ public sealed partial class AppWatcher
             _stopWatcher = new ManagementEventWatcher(scope, stopQuery);
             _stopWatcher.EventArrived += (_, e) => HandleWmiEvent(e, started: false);
             _stopWatcher.Start();
-
-            _mode = WmiMode.Instance;
             return true;
         }
         catch (ManagementException mex)
@@ -186,10 +190,10 @@ public sealed partial class AppWatcher
         return string.IsNullOrWhiteSpace(processName) ? null : processName;
     }
 
-    private string BuildInstanceNameFilter()
+    private string BuildWqlFilterString(string wqlPropertyName, IEnumerable<string>? namesWithoutExe = null)
     {
         // build list of relevant app names
-        var names = _relevantNames
+        var names = (namesWithoutExe ?? _relevantNames)
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Select(n => n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? n : n + ".exe")
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -198,11 +202,11 @@ public sealed partial class AppWatcher
         if (names.Count == 0)
             return "";
 
-        // escape single quotes to conform to wql query syntax
+        // escape single quotes to conform to wql syntax
         static string Esc(string s) => s.Replace("'", "''");
 
-        // build filter
-        var parts = names.Select(name => $"TargetInstance.Name = '{Esc(name)}'");
+        // build filter string dependent on the wql property name
+        var parts = names.Select(n => $"{wqlPropertyName} = '{Esc(n)}'");
         return "(" + string.Join(" OR ", parts) + ")";
     }
 

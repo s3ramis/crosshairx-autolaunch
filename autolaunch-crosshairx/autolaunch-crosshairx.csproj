@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -9,7 +8,6 @@
     <Nullable>enable</Nullable>
     <StartupObject>autolaunch_app.AutolaunchApp</StartupObject>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="System.Management" Version="10.0.3" />
   </ItemGroup>
