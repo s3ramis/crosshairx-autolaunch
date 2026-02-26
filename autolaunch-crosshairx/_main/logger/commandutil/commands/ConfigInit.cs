@@ -4,7 +4,7 @@ namespace AutolaunchApp.Commands;
 public sealed class ConfigInitCommand : ICommand
 {
     public string Name => "config";
-    public string Description => "Config related commands";
+    public string Description => "config related commands";
     public string Usage => "config init [force]";
     public IReadOnlyList<string> Aliases => Array.Empty<string>();
 
@@ -26,6 +26,6 @@ public sealed class ConfigInitCommand : ICommand
         bool force = args.Count >= 2 && args[1].Equals("force", StringComparison.OrdinalIgnoreCase);
         ctx.ConfigFile.InitIfMissing(force);
 
-        Logger.Instance.Log("tip: use 'group init <name>', 'add-open', 'add-watch' and then 'reload'");
+        Logger.Instance.Log("use 'group init <name>', 'add-open', 'add-watch' and then 'reload' to set up first config");
     }
 }

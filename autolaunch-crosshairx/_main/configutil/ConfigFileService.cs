@@ -122,7 +122,7 @@ public sealed class ConfigFileService
         }
         catch
         {
-            // if file is broken -> start fresh (you can also choose to throw)
+            // start new if config broken
             return new JsonObject
             {
                 ["apps"] = new JsonArray { new JsonObject() }

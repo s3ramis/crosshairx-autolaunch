@@ -3,7 +3,7 @@ namespace AutolaunchApp.Commands;
 public sealed class ExitCommand : ICommand
 {
     public string Name => "exit";
-    public string Description => "Closes the application";
+    public string Description => "closes the application";
     public string Usage => "exit";
     public IReadOnlyList<string> Aliases => new[] { "quit" };
 

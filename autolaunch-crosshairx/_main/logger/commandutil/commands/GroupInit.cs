@@ -3,7 +3,7 @@ namespace AutolaunchApp.Commands;
 public sealed class GroupCommand : ICommand
 {
     public string Name => "group";
-    public string Description => "Group related commands";
+    public string Description => "group related commands";
     public string Usage => "group init <groupName>";
     public IReadOnlyList<string> Aliases => Array.Empty<string>();
 

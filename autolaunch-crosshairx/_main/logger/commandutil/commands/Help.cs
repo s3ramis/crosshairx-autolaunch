@@ -11,7 +11,7 @@ public sealed class HelpCommand : ICommand
     }
 
     public string Name => "help";
-    public string Description => "Lists available commands";
+    public string Description => "lists available commands";
     public string Usage => "help";
     public IReadOnlyList<string> Aliases => new[] { "h", "?" };
 

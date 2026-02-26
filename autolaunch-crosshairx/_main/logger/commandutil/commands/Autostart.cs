@@ -4,7 +4,7 @@ namespace AutolaunchApp.Commands;
 public sealed class AutostartCommand : ICommand
 {
     public string Name => "autostart";
-    public string Description => "Enable/disable autostart (HKCU Run)";
+    public string Description => "enable/disable autostart";
     public string Usage => "autostart on | autostart off | autostart status";
     public IReadOnlyList<string> Aliases => Array.Empty<string>();
 

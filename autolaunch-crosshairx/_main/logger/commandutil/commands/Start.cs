@@ -4,7 +4,7 @@ namespace AutolaunchApp.Commands;
 public sealed class StartCommand : ICommand
 {
     public string Name => "start";
-    public string Description => "Resumes watching and resyncs process snapshot";
+    public string Description => "resumes watching and checks for processes that might have opened in the meantime";
     public string Usage => "start";
     public IReadOnlyList<string> Aliases => Array.Empty<string>();
 
@@ -19,7 +19,7 @@ public sealed class StartCommand : ICommand
         ctx.Gate.Set();
         Logger.Instance.Log("watcher resumed");
 
-        // IMPORTANT: while paused, events were ignored -> counts can be stale
+        // check for events that might have started while watcher was paused
         ctx.GetWatcher()?.ResyncNow();
     }
 }

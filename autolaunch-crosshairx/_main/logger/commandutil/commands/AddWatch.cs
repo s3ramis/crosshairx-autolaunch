@@ -20,8 +20,6 @@ public sealed class AddWatchCommand : ICommand
         string path = args[1];
 
         ctx.ConfigFile.AddWatch(group, path);
-
-        // optional: reload immediately
         ctx.ReloadWatcher();
     }
 }

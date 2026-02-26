@@ -4,7 +4,7 @@ namespace AutolaunchApp.Commands;
 public sealed class StopCommand : ICommand
 {
     public string Name => "stop";
-    public string Description => "Pauses watching (events ignored)";
+    public string Description => "pauses watching";
     public string Usage => "stop";
     public IReadOnlyList<string> Aliases => Array.Empty<string>();
 
