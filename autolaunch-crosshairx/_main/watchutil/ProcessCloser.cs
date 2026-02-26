@@ -14,51 +14,92 @@ namespace AutolaunchApp
         {
             try
             {
-                // tries to shutdown the process, with fallback to forceclose Process.Kill
                 if (!TryCloseProcess(_processToClose))
-                {
                     Logger.Instance.Log($"failed to shutdown {_processToClose.ProcessName}");
-                }
             }
             catch (Exception ex)
             {
-                Logger.Instance.Log($"closing process {_processToClose.ProcessName} has failed entirely");
-                Logger.Instance.Log(ex.Message);
+                Logger.Instance.Log($"closing process failed entirely: {ex.Message}");
             }
             finally
             {
-                _processToClose?.Dispose();
+                try { _processToClose.Dispose(); } catch { }
             }
         }
 
         private static bool TryCloseProcess(Process process)
         {
-            if (process == null || process.HasExited)
-            {
-                // process has ended on its own -> return true
-                return true;
-            }
+            if (process == null) return true;
 
             try
             {
-                // soft shutdown
-                if (process.CloseMainWindow())
+                process.Refresh();
+                if (process.HasExited) return true;
+
+                int pid = -1;
+                string name = "unknown";
+
+                try { pid = process.Id; } catch { }
+                try { name = process.ProcessName; } catch { }
+
+                bool hasWindow = false;
+                try
                 {
-                    if (process.WaitForExit(5000))
+                    process.Refresh();
+                    hasWindow = process.MainWindowHandle != IntPtr.Zero;
+                }
+                catch { }
+
+                bool closeRequested = false;
+
+                // soft close only makes sense if there is a window present
+                if (hasWindow)
+                {
+                    try
                     {
-                        return true;
+                        closeRequested = process.CloseMainWindow();
+                        Logger.Instance.Log($"requested close for {name}");
+                    }
+                    catch
+                    {
+                        // catch error so we can proceed to force close if something goes wrong
                     }
                 }
-                // forceclose + log
-                Logger.Instance.Log($"soft shutdown failed, proceeding to force close {process.ProcessName}");
-                process.Kill();
-                process.WaitForExit(3000);
+
+                if (process.WaitForExit(5000))
+                    return true;
+
+                process.Refresh();
+                if (process.HasExited)
+                    return true;
+
+                // 
+                Logger.Instance.Log($"soft shutdown timed out, {name} will be killed");
+
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    process.Kill();
+                }
+
+                // wirklich prüfen, ob er weg ist
+                if (process.WaitForExit(5000))
+                    return true;
+
+                process.Refresh();
+                return process.HasExited;
+            }
+            catch (InvalidOperationException)
+            {
+                // dont care if crashed -> should be closed anyways
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Log($"closing process {process.ProcessName} has failed");
-                Logger.Instance.Log(ex.Message);
+                Logger.Instance.Log($"closing process failed: {ex.Message}");
                 return false;
             }
         }
