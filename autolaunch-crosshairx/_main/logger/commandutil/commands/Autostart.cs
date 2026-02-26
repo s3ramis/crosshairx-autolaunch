@@ -1,3 +1,4 @@
+using AutolaunchApp.Logging;
 namespace AutolaunchApp.Commands;
 
 public sealed class AutostartCommand : ICommand

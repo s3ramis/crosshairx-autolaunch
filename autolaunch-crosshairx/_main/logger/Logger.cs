@@ -1,4 +1,4 @@
-namespace AutolaunchApp;
+namespace AutolaunchApp.Logging;
 
 // single instance logger to prevent write conflicts if used in different threads
 public sealed class Logger

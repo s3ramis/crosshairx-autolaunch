@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "autolaunch-crosshairx", "autolaunch-crosshairx\autolaunch-crosshairx.csproj", "{D2ECE81F-4A0A-0577-C7E0-3291BDD1BFBB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutolaunchApp", "autolaunch-crosshairx\AutolaunchApp.csproj", "{D2ECE81F-4A0A-0577-C7E0-3291BDD1BFBB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

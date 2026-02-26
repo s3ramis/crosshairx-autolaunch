@@ -1,6 +1,6 @@
 using Microsoft.Win32;
 
-namespace AutolaunchApp;
+namespace AutolaunchApp.Commands;
 
 public sealed class AutostartService
 {

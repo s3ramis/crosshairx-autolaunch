@@ -2,8 +2,10 @@ using System.Management;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Principal;
+using AutolaunchApp.Config;
+using AutolaunchApp.Logging;
 
-namespace autolaunch_app;
+namespace AutolaunchApp;
 
 public sealed partial class AppWatcher : IDisposable
 {

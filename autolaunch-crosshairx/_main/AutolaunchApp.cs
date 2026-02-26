@@ -1,4 +1,7 @@
 ﻿using System.Diagnostics;
+using AutolaunchApp.Logging;
+using AutolaunchApp.Commands;
+using AutolaunchApp.Config;
 
 namespace AutolaunchApp
 {
@@ -9,9 +12,9 @@ namespace AutolaunchApp
         private static LogViewerForm? logViewerForm;
         private static readonly ManualResetEventSlim _waitForStart = new(true);
         private static AppWatcher? _appWatcher;
-        private static Commands.CommandProcessor? _cmd;
-        private static Config.ConfigFileService? _cfgFileService;
-        private static AutostartService? _autoStart;
+        private static CommandProcessor? _cmd;
+        private static ConfigFileService? _cfgFileService;
+        private static AutostartService? _autoStartService;
 
         [STAThread]
         static void Main(string[] args)
@@ -21,16 +24,16 @@ namespace AutolaunchApp
 
             CreateTrayIcon();
 
-            var config = LoadConfiguration();
-            if (config == null)
-            {
-                ShowErrorAndExit();
-                return;
-            }
+             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "programs.cfg");
+            _cfgFileService = new ConfigFileService(configPath);
 
-            // isolate watch logic in seperate thread to keep ui responsive
-            _appWatcher = new AppWatcher(config, () => _waitForStart.IsSet);
-            _appWatcher.Start();
+            string exePath = Environment.ProcessPath ?? Application.ExecutablePath;
+            _autoStartService = new AutostartService("AutolaunchApp", exePath);
+
+            _cmd = BuildCommandProcessor(configPath);
+
+            TryStartWatcher();
+            
             Application.Run();
         }
 
@@ -107,41 +110,7 @@ namespace AutolaunchApp
         // handle commands entered in log viewer
         private static void LogViewerForm_CommandEntered(object? sender, string command)
         {
-            switch (command.ToLowerInvariant())
-            {
-                case "stop":
-                    if (!_waitForStart.IsSet)
-                    {
-                        Logger.Instance.Log("watcher already paused");
-                    }
-                    else
-                    {
-                        _waitForStart.Reset();
-                        Logger.Instance.Log("watcher paused by user input");
-                    }
-                    break;
-
-                case "start":
-                    if (_waitForStart.IsSet)
-                    {
-                        Logger.Instance.Log("watcher already running");
-                    }
-                    else
-                    {
-                        _waitForStart.Set();
-                        Logger.Instance.Log("watcher resumed by user input");
-                    }
-                    break;
-
-                case "exit":
-                    Logger.Instance.Log("app closed by user input");
-                    Environment.Exit(1);
-                    break;
-
-                default:
-                    Logger.Instance.Log($"command '{command}' not recognized");
-                    break;
-            }
+           _cmd?.Execute(command);
         }
 
         // --- helpers for config handling --
@@ -193,6 +162,66 @@ namespace AutolaunchApp
             string name = Path.GetFileNameWithoutExtension(path.Trim());
             // return null if name is emtpy else return process name,
             return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+
+        private static CommandProcessor BuildCommandProcessor(string configPath)
+        {
+            bool Reload()
+            {
+                return TryStartWatcher();
+            }
+
+            var ctx = new CommandContext(
+                gate: _waitForStart,
+                getWatcher: () => _appWatcher,
+                reloadWatcher: Reload,
+                configFile: _cfgFileService!,
+                autostart: _autoStartService!,
+                exitApp: ExitApp
+            );
+
+            var cp = new CommandProcessor(ctx);
+
+            // register commands
+            cp.Register(new StopCommand());
+            cp.Register(new StartCommand());
+            cp.Register(new ReloadCommand());
+            cp.Register(new ExitCommand());
+            cp.Register(new ConfigInitCommand());
+            cp.Register(new GroupCommand());
+            cp.Register(new AddOpenCommand());
+            cp.Register(new AddWatchCommand());
+            cp.Register(new AutostartCommand());
+
+            // help command needs access to the registry of commands
+            cp.Register(new HelpCommand(cp.AllCommandsUnique));
+
+            return cp;
+        }
+
+        private static bool TryStartWatcher()
+        {
+            try
+            {
+                var cfg = LoadConfiguration();
+                if (cfg == null)
+                {
+                    Logger.Instance.Log("no usable config loaded. Use 'config init' or fix programs.cfg, then 'reload'.");
+                    return false;
+                }
+
+                try { _appWatcher?.Dispose(); } catch { }
+
+                _appWatcher = new AppWatcher(cfg, () => _waitForStart.IsSet);
+                _appWatcher.Start();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Log($"reload failed: {ex.Message}");
+                return false;
+            }
         }
     }   
 }

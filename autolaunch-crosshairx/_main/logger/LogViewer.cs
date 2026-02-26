@@ -1,155 +1,153 @@
-namespace AutolaunchApp
+namespace AutolaunchApp.Logging;
+public class LogViewerForm : Form
 {
-    public class LogViewerForm : Form
+    private  TextBox logTextBox;
+    private  TextBox inputTextBox;
+    private readonly string _logFilePath;
+    private FileSystemWatcher logWatcher = null!;
+
+    // triggered when command is entered in the input box
+    public EventHandler<string>? CommandEntered;
+
+    public LogViewerForm(string logFilePath)
     {
-        private  TextBox logTextBox;
-        private  TextBox inputTextBox;
-        private readonly string _logFilePath;
-        private FileSystemWatcher logWatcher = null!;
-    
-        // triggered when command is entered in the input box
-        public EventHandler<string>? CommandEntered;
+        _logFilePath = logFilePath;
 
-        public LogViewerForm(string logFilePath)
+        InitializeForm();
+        logTextBox = CreateLogTextBox();
+        inputTextBox = CreateInputTextBox();
+        InitializeControls(inputTextBox, logTextBox);
+
+        LoadLog();
+        WatchLogFile();
+    }
+
+    private void InitializeForm()
+    {
+        Text = "Log Viewer";
+        Width = 750;
+        Height = 500;
+        BackColor = Color.Black;
+    }
+
+    private void InitializeControls(TextBox inputTextBox, TextBox logTextBox)
+    {
+        var mainPanel = new TableLayoutPanel
         {
-            _logFilePath = logFilePath;
+            Dock = DockStyle.Fill,
+            RowCount = 2,
+            ColumnCount = 1
+        };
 
-            InitializeForm();
-            logTextBox = CreateLogTextBox();
-            inputTextBox = CreateInputTextBox();
-            InitializeControls(inputTextBox, logTextBox);
+        mainPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
 
-            LoadLog();
-            WatchLogFile();
+        // if logviewer is clicked -> set cursor into input box
+        logTextBox.Enter += (s, e) => inputTextBox.Focus();
+        inputTextBox.KeyDown += InputTextBox_KeyDown;
+
+        mainPanel.Controls.Add(logTextBox, 0, 0);
+        mainPanel.Controls.Add(inputTextBox, 0, 1);
+
+        Controls.Add(mainPanel);
+    }
+
+    private static TextBox CreateLogTextBox()
+    {
+        return new TextBox
+        {
+            Multiline = true,
+            ReadOnly = true,
+            Dock = DockStyle.Fill,
+            ScrollBars = ScrollBars.Vertical,
+            Font = new Font("Consolas", 12, FontStyle.Regular),
+            BackColor = Color.Black,
+            ForeColor = Color.White,
+            BorderStyle = BorderStyle.None,
+            WordWrap = true
+        };
+    }
+
+    private static TextBox CreateInputTextBox()
+    {
+        return new TextBox
+        {
+            Multiline = false,
+            Dock = DockStyle.Fill,
+            Font = new Font("Consolas", 12, FontStyle.Regular),
+            BackColor = Color.Black,
+            ForeColor = Color.White,
+            BorderStyle = BorderStyle.None
+        };
+    }
+
+    private void LoadLog()
+    {
+        if (File.Exists(_logFilePath))
+        {
+            logTextBox.Text = File.ReadAllText(_logFilePath).TrimEnd('\r', '\n');
+            ScrollToBottom();
         }
-
-        private void InitializeForm()
+        else
         {
-            Text = "Log Viewer";
-            Width = 750;
-            Height = 500;
-            BackColor = Color.Black;
+            logTextBox.Text = "No log file found.";
         }
+    }
 
-        private void InitializeControls(TextBox inputTextBox, TextBox logTextBox)
+    private void ReloadLog()
+    {
+        if (!File.Exists(_logFilePath)) return;
+
+        try
         {
-            var mainPanel = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                RowCount = 2,
-                ColumnCount = 1
-            };
-
-            mainPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-
-            // if logviewer is clicked -> set cursor into input box
-            logTextBox.Enter += (s, e) => inputTextBox.Focus();
-            inputTextBox.KeyDown += InputTextBox_KeyDown;
-
-            mainPanel.Controls.Add(logTextBox, 0, 0);
-            mainPanel.Controls.Add(inputTextBox, 0, 1);
-
-            Controls.Add(mainPanel);
+        string logText = File.ReadAllText(_logFilePath);
+        logTextBox.Text = logText;
+        ScrollToBottom();    
         }
-
-        private static TextBox CreateLogTextBox()
+        catch (IOException)
         {
-            return new TextBox
-            {
-                Multiline = true,
-                ReadOnly = true,
-                Dock = DockStyle.Fill,
-                ScrollBars = ScrollBars.Vertical,
-                Font = new Font("Consolas", 12, FontStyle.Regular),
-                BackColor = Color.Black,
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                WordWrap = true
-            };
+            // egal
         }
+        
+    }
 
-        private static TextBox CreateInputTextBox()
+
+    private void InputTextBox_KeyDown(object? sender, KeyEventArgs kea)
+    {
+        if (kea.KeyCode == Keys.Enter)
         {
-            return new TextBox
-            {
-                Multiline = false,
-                Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 12, FontStyle.Regular),
-                BackColor = Color.Black,
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.None
-            };
+            kea.SuppressKeyPress = true;
+            string command = inputTextBox.Text.Trim();
+            inputTextBox.Clear();
+
+            if (!string.IsNullOrEmpty(command))
+                CommandEntered?.Invoke(this, command);
         }
+    }
 
-        private void LoadLog()
+    private void ScrollToBottom()
+    {
+        logTextBox.SelectionStart = logTextBox.Text.Length;
+        logTextBox.ScrollToCaret();
+    }
+
+    private void WatchLogFile()
+    {
+        var dir = Path.GetDirectoryName(_logFilePath);
+        var file = Path.GetFileName(_logFilePath);
+
+        logWatcher = new FileSystemWatcher(dir!, file)
         {
-            if (File.Exists(_logFilePath))
-            {
-                logTextBox.Text = File.ReadAllText(_logFilePath).TrimEnd('\r', '\n');
-                ScrollToBottom();
-            }
-            else
-            {
-                logTextBox.Text = "No log file found.";
-            }
-        }
-
-        private void ReloadLog()
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
+        };
+        logWatcher.Changed += (s, e) =>
         {
-            if (!File.Exists(_logFilePath)) return;
-
             try
             {
-            string logText = File.ReadAllText(_logFilePath);
-            logTextBox.Text = logText;
-            ScrollToBottom();    
+                Invoke(new Action(ReloadLog));
             }
-            catch (IOException)
-            {
-                // egal
-            }
-            
-        }
-
-
-        private void InputTextBox_KeyDown(object? sender, KeyEventArgs kea)
-        {
-            if (kea.KeyCode == Keys.Enter)
-            {
-                kea.SuppressKeyPress = true;
-                string command = inputTextBox.Text.Trim();
-                inputTextBox.Clear();
-
-                if (!string.IsNullOrEmpty(command))
-                    CommandEntered?.Invoke(this, command);
-            }
-        }
-
-        private void ScrollToBottom()
-        {
-            logTextBox.SelectionStart = logTextBox.Text.Length;
-            logTextBox.ScrollToCaret();
-        }
-
-        private void WatchLogFile()
-        {
-            var dir = Path.GetDirectoryName(_logFilePath);
-            var file = Path.GetFileName(_logFilePath);
-
-            logWatcher = new FileSystemWatcher(dir!, file)
-            {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
-            };
-            logWatcher.Changed += (s, e) =>
-            {
-                try
-                {
-                    Invoke(new Action(ReloadLog));
-                }
-                catch { }
-            };
-            logWatcher.EnableRaisingEvents = true;
-        }
+            catch { }
+        };
+        logWatcher.EnableRaisingEvents = true;
     }
 }

@@ -3,10 +3,10 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <RootNamespace>autolaunch_crosshairx</RootNamespace>
+    <RootNamespace>AutolaunchApp</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <StartupObject>autolaunch_app.AutolaunchApp</StartupObject>
+    <StartupObject>AutolaunchApp.AutolaunchApp</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Management" Version="10.0.3" />
