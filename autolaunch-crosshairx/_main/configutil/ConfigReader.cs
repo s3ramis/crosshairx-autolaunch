@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace autolaunch_app;
+namespace AutolaunchApp.Config;
 
 /*
 expected config layout (json):

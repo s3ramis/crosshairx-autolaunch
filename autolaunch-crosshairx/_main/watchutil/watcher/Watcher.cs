@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Security.Principal;
 using System.Windows.Forms.VisualStyles;
 
-namespace autolaunch_app;
+namespace AutolaunchApp;
 
 public sealed partial class AppWatcher : IDisposable
 {

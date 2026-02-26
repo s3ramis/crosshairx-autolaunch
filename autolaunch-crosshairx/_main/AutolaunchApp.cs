@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace autolaunch_app
+namespace AutolaunchApp
 {
     public static class AutolaunchApp
     {
@@ -9,6 +9,9 @@ namespace autolaunch_app
         private static LogViewerForm? logViewerForm;
         private static readonly ManualResetEventSlim _waitForStart = new(true);
         private static AppWatcher? _appWatcher;
+        private static Commands.CommandProcessor? _cmd;
+        private static Config.ConfigFileService? _cfgFileService;
+        private static AutostartService? _autoStart;
 
         [STAThread]
         static void Main(string[] args)

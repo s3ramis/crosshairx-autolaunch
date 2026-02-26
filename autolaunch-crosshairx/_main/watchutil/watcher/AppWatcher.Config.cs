@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace autolaunch_app;
+namespace AutolaunchApp;
 
 public sealed partial class AppWatcher
 {

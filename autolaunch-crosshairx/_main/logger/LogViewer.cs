@@ -1,4 +1,4 @@
-namespace autolaunch_app
+namespace AutolaunchApp
 {
     public class LogViewerForm : Form
     {

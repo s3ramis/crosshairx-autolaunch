@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace autolaunch_app;
+namespace AutolaunchApp;
 
 public sealed partial class AppWatcher
 {

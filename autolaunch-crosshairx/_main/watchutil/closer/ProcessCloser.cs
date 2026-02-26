@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace autolaunch_app
+namespace AutolaunchApp
 {
     // handles shutdown for a specified process
     public class ProcessCloser(Process processToClose)

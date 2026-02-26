@@ -1,4 +1,4 @@
-namespace autolaunch_app;
+namespace AutolaunchApp.Config;
 
 public sealed class ConfigData
 {
